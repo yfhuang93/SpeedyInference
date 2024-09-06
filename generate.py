@@ -100,6 +100,11 @@ def main(args: Arguments, generate_arguments: GenerateArguments, generation_conf
         tokenizer=tokenizer, model=model, generation_strategy=generation_strategy
     )
 
+    # Warmup
+    warmup = 1
+    for _ in range(warmup):
+        model.generate(inputs = torch.randint(low=0, high=10, size=(10,10), device=device), max_new_tokens=10)
+
     while True:
         print()
         print("Enter a prompt and then press ctrl+d twice for the model to complete:")
