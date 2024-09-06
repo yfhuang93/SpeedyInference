@@ -58,7 +58,7 @@ def load_model_and_tokenizer(args: Arguments, device: str = "cuda"):
     tokenizer = transformers.LlamaTokenizer.from_pretrained(
         local_model_path, use_fast=False
     )
-    config = transformers.LlamaConfig.from_pretrained(local_model_path)
+    config = transformers.LlamaConfig.from_pretrained(local_model_path, from_safetensors=True)
     model = transformers.LlamaForCausalLM.from_pretrained(
         local_model_path,
         config=config,
