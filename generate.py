@@ -103,7 +103,8 @@ def main(args: Arguments, generate_arguments: GenerateArguments, generation_conf
     # Warmup
     warmup = 1
     for _ in range(warmup):
-        model.generate(inputs = torch.randint(low=0, high=10, size=(10,10), device=device), max_new_tokens=10)
+        model.generation_config.pad_token_id = tokenizer.eos_token_id
+        model.generate(**tokenizer("This is a warmup prompt", return_tensors="pt").to(device), max_new_tokens=10)
 
     while True:
         print()
