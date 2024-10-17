@@ -51,21 +51,17 @@ def setup(args: Arguments, device: str = "cuda"):
         # only run on rank 0, we don't support parallel inference yet
         exit()
 
-def load_model_and_tokenizer(args: Arguments, device: str = "cuda"):
+def load_model_and_tokenizer(args: Arguments, device: str = "auto"):
     local_model_path: str = args.model
 
     # initialize model
-    tokenizer = transformers.LlamaTokenizer.from_pretrained(
-        local_model_path, use_fast=False
-    )
-    config = transformers.LlamaConfig.from_pretrained(local_model_path, from_safetensors=True)
-    model = transformers.LlamaForCausalLM.from_pretrained(
+    tokenizer = transformers.AutoTokenizer.from_pretrained(local_model_path)
+    model = transformers.AutoModelForCausalLM.from_pretrained(
         local_model_path,
-        config=config,
+        use_safetensors=True,
+        device_map="auto",
         torch_dtype=torch.float16,
     )
-    model.to(device)
-    model.half()
     model.eval()
 
     return model, tokenizer

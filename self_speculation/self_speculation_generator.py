@@ -204,7 +204,7 @@ class SelfSpeculativeGenerationStrategy(GenerationStrategy):
                 streamer.put(verified_tokens[0][number_of_matches : number_of_matches + 1])
             else:
                 # streamer.put(torch.cat((draft_output_ids[0, : number_of_matches], verified_tokens[0][number_of_matches : number_of_matches + 1])))
-                streamer.put(torch.Tensor(output_ids[len(output_ids)-number_of_matches-1:]))
+                streamer.put(torch.LongTensor(output_ids[len(output_ids)-number_of_matches-1:]))
 
         # we want the entire output sequence + input sequence
         past_key_values = crop_past_key_values(
