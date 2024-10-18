@@ -211,12 +211,15 @@ If you use LayerSkip in your research, please use the following BibTex entry:
 
 ```bibtex
 @misc{layerskip,
-      title={LayerSkip: Enabling Early Exit Inference and Self-Speculative Decoding}, 
-      author={Mostafa Elhoushi and Akshat Shrivastava and Diana Liskovich and Basil Hosmer and Bram Wasti and Liangzhen Lai and Anas Mahmoud and Bilge Acun and Saurabh Agarwal and Ahmed Roman and Ahmed A Aly and Beidi Chen and Carole-Jean Wu},
-      year={2024},
-      booktitle = "Accepted in ACL Main Conference",
-      eprint={2404.16710},
-      archivePrefix={arXiv},
-      primaryClass={cs.CL}
+    title={LayerSkip: Enabling Early Exit Inference and Self-Speculative Decoding},
+    author={Mostafa Elhoushi and Akshat Shrivastava and Diana Liskovich and Basil Hosmer and Bram Wasti and Liangzhen Lai and Anas Mahmoud and Bilge Acun and Saurabh Agarwal and Ahmed Roman and Ahmed A Aly and Beidi Chen and Carole-Jean Wu},
+    booktitle = "Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)",
+    month = aug,
+    year = "2024",
+    address = "Bangkok, Thailand",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2024.acl-long.681",
+    doi = "10.18653/v1/2024.acl-long.681",
+    pages = "12622--12642",
 }
 ```
