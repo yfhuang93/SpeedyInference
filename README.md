@@ -90,98 +90,31 @@ Tips:
 - You may run `python benchmark.py --help` for details on different command-line arguments.
 
 ## Sweep
+Our inference hyperparameters, `exit_layer` and `num_speculations` determine the speedup during inference:
+- `exit_layer`:
+    - smaller means a faster but less accurate draft stage
+    - larger means a more accurate but slower draft stage
+- `num_speculations`:
+    - smaller means higher acceptance rate but verification stage will amortize less the draft stage
+    - learger means verification stage will better amortize the draft stage but acceptance rate decreases
 
+The optimal combination of `exit_layer` and `num_speculations` may change with the model, dataset and sampling parameters. Hence, we provided a script to sweep over a grid of different `exit_layer` and `num_speculations`:
 
-- Llama 7B continual:
-    - Greedy:
-        - HumanEval
-        ```console
-        $ torchrun sweep.py --model facebook/layerskip-llama2-7B \
-            --dataset human_eval \
-            --generation_strategy self_speculative \
-            --num_samples 150 \
-            --max_steps 256 \
-            --output_dir ./logs/llama2_7b/greedy/human_eval/ \
-            --sample False
-        ```
+```console
+$ torchrun sweep.py --model facebook/layerskip-llama2-7B \
+    --dataset human_eval \
+    --generation_strategy self_speculative \
+    --num_samples 150 \
+    --max_steps 256 \
+    --output_dir ./logs/ \
+    --sample False
+```
 
-        - CNN/DM Summarization
-        ```console
-        $ torchrun sweep.py --model facebook/layerskip-llama2-7B \
-            --dataset cnn_dm_summarization \
-            --generation_strategy self_speculative \
-            --num_samples 150 \
-            --max_steps 256 \
-            --output_dir ./logs/llama2_7b/greedy/cnn_dm_summarization/ \
-            --sample False
-        ```
+This will create a CSV file in the directory specified in the `--outpu_dir` argument.
 
-        - XSUM Summarization
-        ```console
-        $ torchrun sweep.py --model facebook/layerskip-llama2-7B \
-            --dataset xsum_summarization \
-            --generation_strategy self_speculative \
-            --num_samples 150 \
-            --max_steps 256 \
-            --output_dir ./logs/llama2_7b/greedy/xsum_summarization/ \
-            --sample False
-        ```
-
-        - CNN/DM Language Modeling
-        ```console
-        $ torchrun sweep.py --model facebook/layerskip-llama2-7B \
-            --dataset cnn_dm_lm \
-            --generation_strategy self_speculative \
-            --num_samples 150 \
-            --max_steps 256 \
-            --output_dir ./logs/llama2_7b/greedy/cnn_dm_lm/ \
-            --sample False
-        ```
-    - Sampling:
-        - HumanEval
-        ```console
-        $ torchrun sweep.py --model facebook/layerskip-llama2-7B \
-            --dataset human_eval \
-            --generation_strategy self_speculative \
-            --num_samples 150 \
-            --max_steps 256 \
-            --output_dir ./logs/llama2_7b/sampling/human_eval/ \
-            --sample True
-        ```
-
-        - CNN/DM Summarization
-        ```console
-        $ torchrun sweep.py --model facebook/layerskip-llama2-7B \
-            --dataset cnn_dm_summarization \
-            --generation_strategy self_speculative \
-            --num_samples 150 \
-            --max_steps 256 \
-            --output_dir ./logs/llama2_7b/sampling/cnn_dm_summarization/ \
-            --sample True
-        ```
-
-        - XSUM Summarization
-        ```console
-        $ torchrun sweep.py --model facebook/layerskip-llama2-7B \
-            --dataset xsum_summarization \
-            --generation_strategy self_speculative \
-            --num_samples 150 \
-            --max_steps 256 \
-            --output_dir ./logs/llama2_7b/sampling/xsum_summarization/ \
-            --sample True
-        ```
-
-        - CNN/DM Language Modeling
-        ```console
-        $ torchrun sweep.py --model facebook/layerskip-llama2-7B \
-            --dataset cnn_dm_lm \
-            --generation_strategy self_speculative \
-            --num_samples 150 \
-            --max_steps 256 \
-            --output_dir ./logs/llama2_7b/sampling/cnn_dm_lm/ \
-            --sample True
-        ```
-
+Tips:
+- Similar to the `generate.py` and `benchmark.py` scripts, you may specify different models, datasets, and sampling parameters
+- You may run `python sweep.py --help` for details on different command-line arguments.
 
 ## Correctness
 - Llama 7B continual:
