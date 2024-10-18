@@ -117,21 +117,25 @@ Tips:
 - You may run `python sweep.py --help` for details on different command-line arguments.
 
 ## Correctness
-- Llama 7B continual:
-    - HumanEval
-    ```console
-    $ torchrun correctness.py --model facebook/layerskip-llama2-7B \
-        --dataset human_eval \
-        --generation_strategy self_speculative \
-        --num_speculations 6 \
-        --exit_layer 4 \
-        --num_samples 10 \
-        --output_dir ./logs
-    ```
-    Result:
-    ```console
-    
-    ```
+In order to verify that the generated tokens of our self-speculative decoding algorithm are correct, we have created a script to compare the outputs of autoregressive decoding with self-speculative decoding. Note that the outputs we can only guarantee equivalence when there is no sampling (i.e., `--sample False`): 
+```console
+$ torchrun correctness.py --model facebook/layerskip-llama2-7B \
+    --dataset human_eval \
+    --generation_strategy self_speculative \
+    --num_speculations 6 \
+    --exit_layer 4 \
+    --num_samples 10 \
+    --sample False \
+    --output_dir ./logs
+```
+
+## Other Implementations
+We also have other implementations of LayerSkip inference:
+- [gpt-fast](https://github.com/pytorch-labs/gpt-fast/tree/LayerSkip?tab=readme-ov-file#self-speculative-sampling): gpt-fast is a simple and efficient pytorch-native transformer text generation. We have implemented LayerSkip in the gpt-fast codebase to enable compouding it with other optimizations such as `torch.compile()`, quantization, and tensor parallelism.
+- [Native HuggingFace](https://huggingface.co/facebook/layerskip-llama2-7B#huggingface): in the model card of each of our HuggingFace models, we have provided simple code snippets that leverages HuggingFace speculative decoding capabilities using a simple trick to clone the earlier layers of the main model without cloning its weights. Although this implementation is simple and does not require implementing other functions or importing other libraries, it does not share the KV cache or execution between the draft and verification stages.
+
+## Training
+Our training implementation is work-in-progress. You can check this [pull request](https://github.com/pytorch/torchtune/pull/1076) for details and discussions.
 
 ## License
 LayerSkip is licensed under CC-by-NC license. Refer to the LICENSE file in the top level directory.
