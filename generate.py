@@ -102,6 +102,9 @@ def main(args: Arguments, generate_arguments: GenerateArguments, generation_conf
         model.generation_config.pad_token_id = tokenizer.eos_token_id
         model.generate(**tokenizer("This is a warmup prompt", return_tensors="pt").to(device), max_new_tokens=10)
 
+    # Avoid logging warnings that will overlap with generated text
+    transformers.utils.logging.set_verbosity_error()
+
     while True:
         print()
         print("Enter a prompt and then press ctrl+d twice for the model to complete:")
