@@ -69,6 +69,7 @@ def load_model_and_tokenizer(args: Arguments, device: str = "auto"):
 def main(args: Arguments, generate_arguments: GenerateArguments, generation_config: GenerationConfig):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     setup(args, device=device)
+    transformers.utils.logging.set_verbosity_error()
     model, tokenizer = load_model_and_tokenizer(args, device=device)
 
     streamer = None
@@ -101,9 +102,6 @@ def main(args: Arguments, generate_arguments: GenerateArguments, generation_conf
     for _ in range(warmup):
         model.generation_config.pad_token_id = tokenizer.eos_token_id
         model.generate(**tokenizer("This is a warmup prompt", return_tensors="pt").to(device), max_new_tokens=10)
-
-    # Avoid logging warnings that will overlap with generated text
-    transformers.utils.logging.set_verbosity_error()
 
     while True:
         print()
