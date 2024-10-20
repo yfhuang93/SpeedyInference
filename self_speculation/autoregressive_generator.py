@@ -17,6 +17,7 @@ from self_speculation.generator_base import (
 )
 from self_speculation.llama_model_utils import (
     decode_next_token,
+    forward,
     forward_early,
 )
 
@@ -48,8 +49,10 @@ class AutoRegressiveGenerationStrategy(GenerationStrategy):
                     exit_query_cache,
                 )
             else:
-                model_output = model(
-                    input_ids=input_ids, past_key_values=past_key_values
+                model_output = forward(
+                    model,
+                    input_ids,
+                    past_key_values,
                 )
             logits = model_output.logits
             if logits_processors:
