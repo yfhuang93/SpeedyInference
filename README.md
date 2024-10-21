@@ -65,9 +65,9 @@ Tips:
 - By default we enable sampling. You may change the sampling behaviour using the `--sample`, `--temperature`, `--top_p`, and `--top_k` arguments.
 - You may run `python generate.py --help` for details on different command-line arguments.
 
-## Evaluate
+## Benchmark
 
-To evaluate a task:
+To benchmark on a dataset:
 
 ```console
 $ torchrun benchmark.py --model facebook/layerskip-llama2-7B \
@@ -87,6 +87,26 @@ Tips:
     - `human_eval`: HumanEval Coding
 - By default, the tasks run as 0-shot. You can change to any specified `n`-shot by specifying the `--n_shot` argument.
 - By default we enable sampling, while the results reported in the paper were greedy decoding without sampling. You may change the sampling behaviour using the `--sample`, `--temperature`, `--top_p`, and `--top_k` arguments.
+- You may run `python benchmark.py --help` for details on different command-line arguments.
+
+## Evaluate
+
+We have integrated our generation scripts with [Eleuther Language Model Evaluation Harness](https://github.com/EleutherAI/lm-evaluation-harness/tree/main) to enable a large number of tasks and properly post-process generated text.
+
+```console
+$ torchrun eval.py --model facebook/layerskip-llama2-7B \
+    --tasks gsm8k \
+    --limit 10 \
+    --generation_strategy self_speculative \
+    --exit_layer 8 \
+    --num_speculations 6 \
+    --output_dir ./logs
+```
+
+Tips:
+- Note that with speculative decoding we can only obtain speedups from generation tasks (e.g., `gsm8k` or `cnn_dailymail`), while classificaton tasks, i.e., multiple choice question tasks (e.g., `piqa`, `social_iqa`) or True/False question tasks (e.g., `boolq`) will not lead to speedup.
+- You can specify arbitrary number of tasks supported by Eleuther Evaluation Harness using the `--tasks` argument. To get a list of all of possible tasks, check this [link](https://github.com/EleutherAI/lm-evaluation-harness/tree/main/lm_eval/tasks).
+- Similar to the `generate.py` and `benchmark.py` scripts, you may specify different models, datasets, and sampling parameters
 - You may run `python benchmark.py --help` for details on different command-line arguments.
 
 ## Sweep
