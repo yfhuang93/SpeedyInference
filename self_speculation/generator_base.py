@@ -6,7 +6,7 @@
 #
 
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional
 
 import torch
@@ -43,6 +43,11 @@ class GenerationConfig:
     no_repeat_ngram_size: int = None
     stop_words: List[str] = None
 
+    ## add parameters to incorporate CALM early exit @ gary
+    conf_threshold: float = 0.8
+    conf_method: str = 'softmax_max'   # 'softmax_diff', 'state_cosine_similarity'
+    min_exit_layer: int = 1
+    exit_interval: int = 1
 
 class GenerationStrategy:
     def generate_token_ids(
