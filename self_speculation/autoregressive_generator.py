@@ -20,6 +20,7 @@ from self_speculation.llama_model_utils import (
     decode_next_token,
     forward,
     forward_early,
+    forward_early_with_CALM
 )
 
 import torch.nn.functional as F
@@ -97,66 +98,28 @@ class AutoRegressiveGenerationStrategyWithCALM(GenerationStrategy):
             stopping_criteria: Optional[transformers.StoppingCriteriaList] = None,
             streamer: Optional[transformers.TextStreamer] = None,
     ) -> GenerationStrategyResult:
-
+        """Variant of `generate` with inputs/outputs formatted as token_ids."""
         past_key_values = None
+
         input_ids: torch.Tensor = torch.tensor([input_ids]).to(model.device)
         output_ids: List[int] = []
+
         exit_query_cache = None
-
-        batch_size = input_ids.size(0)
-        prev_hidden_state = torch.zeros(batch_size, model.config.hidden_size).to(input_ids.device)
-
-        exit_layer = generation_config.exit_layer
-        min_exit_layer = generation_config.min_exit_layer
-        middle_layer = exit_layer // 2 if exit_layer // 2 > min_exit_layer else min_exit_layer + 1
-        critical_layers = [min_exit_layer, middle_layer]
-
-        for step in range(generation_config.max_steps):
-            token_exit_layer = exit_layer
-
-            for layer in critical_layers:
-                model_output = forward_early(
+        for _ in range(generation_config.max_steps):
+            if generation_config.exit_layer > 0:
+                model_output = forward_early_with_CALM(
                     model,
                     input_ids,
                     past_key_values,
-                    layer,
+                    generation_config.exit_layer,
                     exit_query_cache,
                 )
-
-                logits = model_output.logits
-                if logits_processors:
-                    logits = logits_processors(input_ids, logits)
-                past_key_values = model_output.past_key_values
-                last_token_logits = logits[:, -1, :]
-
-                if model_output.hidden_states is not None and len(model_output.hidden_states) > 0:
-                    new_state = model_output.hidden_states[-1][:, -1, :]  # [batch_size, hidden_size]
-                else:
-                    new_state = torch.zeros(batch_size, model.config.hidden_size).to(input_ids.device)
-
-                confidence = compute_confidence(
-                    logits=last_token_logits,
-                    prev_state=prev_hidden_state,
-                    new_state=new_state,
-                    conf_method=generation_config.conf_method,
-                )
-
-                exit_now = should_exit(confidence, generation_config.conf_threshold)
-                prev_hidden_state = new_state
-
-                if exit_now.any():
-                    # print("Current_layer:",layer)
-                    token_exit_layer = layer
-                    break
-
-            model_output = forward_early(
+            else:
+                model_output = forward(
                     model,
                     input_ids,
                     past_key_values,
-                    token_exit_layer,
-                    exit_query_cache,
-            )
-
+                )
             logits = model_output.logits
             if logits_processors:
                 logits = logits_processors(input_ids, logits)
@@ -174,13 +137,13 @@ class AutoRegressiveGenerationStrategyWithCALM(GenerationStrategy):
                 if torch.all(stopping_criteria(input_ids, scores=None)):
                     break
             output_ids.append(next_token)
+            # Don't concatenate `next_token` to original `input_ids` since we're using
+            # the KV cache (`past_key_values`) to speed up generation.
             input_ids = torch.tensor([[next_token]]).to(input_ids)
 
         return GenerationStrategyResult(
             predicted_tokens=output_ids,
             acceptance_rate=None,
         )
-
-
 
 

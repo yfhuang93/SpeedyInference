@@ -11,7 +11,7 @@ def softmax_diff(logits: torch.Tensor) -> torch.Tensor:
     """
     sorted_logits, _ = torch.sort(logits, dim=-1, descending=True)
     sorted_probs = F.softmax(sorted_logits, dim=-1)
-    return sorted_probs[:, 0] - sorted_probs[:, 1]
+    return (sorted_probs[:, 0] - sorted_probs[:, 1])*10000
 
 
 
@@ -21,9 +21,8 @@ def softmax_max(logits: torch.Tensor) -> torch.Tensor:
     Input: logits (torch.Tensor): [batch_size, vocab_size]
     Returns:torch.Tensor: [batch_size]
     """
-    probs = F.softmax(logits, dim=-1)
-    return torch.max(probs, dim=-1).values
-
+    probs = F.softmax(logits.float(), dim=-1)
+    return torch.max(probs, dim=-1).values*10000
 
 
 def state_cosine_similarity(prev_state: torch.Tensor, new_state: torch.Tensor) -> torch.Tensor:
@@ -37,7 +36,7 @@ def state_cosine_similarity(prev_state: torch.Tensor, new_state: torch.Tensor) -
     """
     numerator = torch.sum(prev_state * new_state, dim=-1)
     denominator = torch.norm(prev_state, dim=-1) * torch.norm(new_state, dim=-1) + 1e-8
-    return numerator / denominator
+    return (numerator*10000 / denominator)
 
 
 
