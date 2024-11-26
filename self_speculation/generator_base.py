@@ -46,8 +46,9 @@ class GenerationConfig:
     ## add parameters to incorporate CALM early exit @ gary
     conf_threshold: float = 0.8
     conf_method: str = 'softmax_max'   # 'softmax_diff', 'state_cosine_similarity'
-    layer_interval:int = 1
     final_exit_layer: int = None
+    position_adjusted_threshold: bool = False
+    position_temp: float = 0.8
 
 
 class GenerationStrategy:

@@ -105,7 +105,7 @@ class AutoRegressiveGenerationStrategyWithCALM(GenerationStrategy):
         output_ids: List[int] = []
 
         exit_query_cache = None
-        for _ in range(generation_config.max_steps):
+        for step in range(generation_config.max_steps):
             if generation_config.exit_layer > 0:
                 model_output = forward_early_with_CALM(
                     model,
@@ -113,6 +113,7 @@ class AutoRegressiveGenerationStrategyWithCALM(GenerationStrategy):
                     past_key_values,
                     generation_config.exit_layer,
                     exit_query_cache,
+                    step
                 )
             else:
                 model_output = forward(

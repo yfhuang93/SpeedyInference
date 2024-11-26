@@ -426,7 +426,10 @@ def main(args: Arguments, eval_arguments: EvalArguments, generation_config: Gene
 
     # TODO: log results, generation samples, etc.
     print(results["results"])
-    wrap.metric_result.pop("predicted_text")
+    if wrap.metric_result is not None:
+        wrap.metric_result.pop("predicted_text")
+    else:
+        print("Warning: metric_result is None. Skipping 'predicted_text' pop.")
     print(wrap.metric_result)
 
 def process_cli_arguments() -> Tuple[Arguments, EvalArguments, GenerationConfig]:

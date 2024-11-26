@@ -7,7 +7,7 @@
 
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
-
+import torch.nn.functional as F
 import torch
 import transformers
 
@@ -303,6 +303,9 @@ def forward_remainder(
     draft_past_key_values_length: int = 0
     full_past_key_values_length: int = 0
 
+    # Print input information
+    # print(f"Input tensor shape: {input_ids.shape}")
+
     if past_key_values is not None and past_key_values[0] is not None:
         # it's okay to use the first layer because the draft model necessairly computes it
         draft_past_key_values_length = past_key_values[0][0].shape[2]
@@ -317,6 +320,11 @@ def forward_remainder(
             full_past_key_values_length = 0
 
         seq_length_with_past = num_tokens_to_generate + draft_past_key_values_length
+
+    # # Print past_key_values details
+    # print(f"draft_past_key_values_length: {draft_past_key_values_length}")
+    # print(f"full_past_key_values_length: {full_past_key_values_length}")
+
     past_key_values = transformers.cache_utils.DynamicCache.from_legacy_cache(past_key_values)
 
     inputs_embeds = model.model.embed_tokens(input_ids)
@@ -355,6 +363,9 @@ def forward_remainder(
     full_hidden_states: Optional[torch.FloatTensor] = None
     for idx, decoder_layer in enumerate(model.model.layers):
         is_early_exit = idx < exit_layer
+
+        # print(f"Processing layer {idx + 1}/{len(model.model.layers)}. Early exit: {is_early_exit}")
+
         past_key_value = (
             past_key_values[idx]
             if (past_key_values is not None and idx < len(past_key_values))
@@ -364,6 +375,13 @@ def forward_remainder(
             # early hidden states: B x num_gen x C
             early_hidden_states = hidden_states[:, -num_tokens_to_generate:]
             early_position_ids = position_ids[:, -num_tokens_to_generate:]
+
+            # print(f"attention_mask shape: {attention_mask.shape}")
+            # if full_hidden_states is not None:
+            #     print(f"full_hidden_states shape: {full_hidden_states.shape}")
+            # print(
+            #     f"past_key_values shapes: {[f'layer {idx}: {[t.shape for t in p]}' for idx, p in enumerate(past_key_values)]}")
+
             hidden_states, past_key_values = decoder_layer(
                 early_hidden_states,
                 attention_mask=early_attention_mask,
@@ -373,9 +391,13 @@ def forward_remainder(
                 use_cache=True,
                 padding_mask=None,
             )
-
         else:
             if full_hidden_states is None and exit_query_cache is not None:
+
+                # print(f"Using exit_query_cache for layer {idx + 1}")
+                # print(f"exit_query_cache shape: {exit_query_cache.shape}")
+                # print(f"hidden_states shape before concat: {hidden_states[:, -num_tokens_to_generate:].shape}")
+
                 # first time seeing the full hidden states, we need to rely on the
                 # query cache
                 # only use if exit query cache exists, if not this is our first call
@@ -383,9 +405,11 @@ def forward_remainder(
                     [exit_query_cache, hidden_states[:, -num_tokens_to_generate:]],
                     dim=1,
                 )
+                # print(f"full_hidden_states shape after concat: {full_hidden_states.shape}")
             else:
                 # we already have seen the fully hidden states we can re-use them now
                 full_hidden_states = hidden_states
+            # try:
             hidden_states, past_key_values = decoder_layer(
                 full_hidden_states,
                 attention_mask=full_attention_mask,
@@ -394,12 +418,33 @@ def forward_remainder(
                 output_attentions=False,
                 use_cache=True,
                 padding_mask=None,
-            )
+                )
+            # except RuntimeError as e:
+            #     print(f"Error in Layer {idx + 1}")
+            #     print(f"full_hidden_states shape: {full_hidden_states.shape}")
+            #     print(f"attention_mask shape: {full_attention_mask.shape}")
+            #     print(f"position_ids shape: {position_ids.shape}")
+            #     print(f"past_key_value shapes: {[p.shape for p in past_key_values]}")
+            #     raise e
+
+    # # Print hidden state and past key value details
+    # print(f"Hidden state shape after layer {idx + 1}: {hidden_states.shape}")
+    # if past_key_value is not None:
+    #     print(
+    #         f"past_key_values shapes: {[f'layer {idx}: {[t.shape for t in p]}' for idx, p in enumerate(past_key_values)]}")
+
     all_hidden_states.append(hidden_states.clone())
 
     past_key_values = past_key_values.to_legacy_cache()
+
+    # Print exit query cache details
+    # if exit_query_cache is not None:
+    #     print(f"exit_query_cache shape before final layer: {exit_query_cache.shape}")
+
     hidden_states = model.model.norm(hidden_states)
     logits = model.lm_head(hidden_states)
+
+    # print(f"Final logits shape: {logits.shape}")
 
     return ForwardResult(
         logits=logits, past_key_values=past_key_values, exit_query_cache=exit_query_cache,hidden_states=all_hidden_states
@@ -411,9 +456,13 @@ def forward_early_with_CALM(
     past_key_values: Optional[List[Tuple[torch.Tensor, torch.Tensor]]],
     exit_layer: int,
     exit_query_cache: Optional[List[torch.Tensor]],
+    position: int,
 ) -> ForwardResult:
     device = input_ids.device
     batch_size, seq_length = input_ids.shape
+
+    # print(f"[forward_early_with_CALM] Input tensor shape: {input_ids.shape}")
+
 
     seq_length_with_past = seq_length
     past_key_values_length = 0
@@ -421,6 +470,9 @@ def forward_early_with_CALM(
     if past_key_values is not None:
         past_key_values_length = past_key_values[0][0].shape[2]
         seq_length_with_past = seq_length_with_past + past_key_values_length
+        # print(f"[forward_early_with_CALM] past_key_values length: {len(past_key_values)}")
+        # print(f"past_key_values shapes: {[f'layer {idx}: {[t.shape for t in p]}' for idx, p in enumerate(past_key_values)]}")
+
     past_key_values = transformers.cache_utils.DynamicCache.from_legacy_cache(past_key_values)
 
 
@@ -444,9 +496,13 @@ def forward_early_with_CALM(
         past_key_values_length,
     )
 
+    # print(f"[forward_early_with_CALM] Target exit_layer: {exit_layer}")
+    # print(f"[forward_early_with_CALM] Position: {position}")
+
     hidden_states = inputs_embeds
     prev_state = hidden_states.clone()
     for layer_idx, decoder_layer in enumerate(model.model.layers):
+        # print(f"[forward_early_with_CALM] Processing layer {layer_idx + 1}")
         hidden_states, past_key_values = decoder_layer(
             hidden_states,
             attention_mask=attention_mask,
@@ -456,9 +512,12 @@ def forward_early_with_CALM(
             use_cache=True,
             padding_mask=None,
         )
+        # print(f"[forward_early_with_CALM] Hidden states shape after layer {layer_idx + 1}: {hidden_states.shape}")
+
         current_logits = model.lm_head(hidden_states)
         last_token_logits = current_logits[:, -1, :]
         new_state = hidden_states.clone()
+
 
         confidence = compute_confidence(
             logits=last_token_logits.float(),
@@ -466,10 +525,27 @@ def forward_early_with_CALM(
             new_state=new_state[:, -1, :].float(),  # [batch_size, hidden_size]
             conf_method=GenerationConfig.conf_method,
         )  # [batch_size]
+
+        # print(f"[forward_early_with_CALM] Layer {layer_idx + 1} confidence: {confidence}")
+
+        if GenerationConfig.position_adjusted_threshold:
+            adjusted_threshold = (
+                GenerationConfig.conf_threshold
+                * torch.exp(-GenerationConfig.position_temp * position / GenerationConfig.max_steps)
+                / 10
+                + 9 * GenerationConfig.conf_threshold / 10
+            )
+        else:
+            adjusted_threshold = GenerationConfig.conf_threshold
+
+        # print(f"[forward_early_with_CALM] Adjusted threshold: {adjusted_threshold}")
+
         # Decide whether to exit
-        exit_now = should_exit(confidence, GenerationConfig.conf_threshold)
+        exit_now = should_exit(confidence, adjusted_threshold)
+        # print(f"[forward_early_with_CALM] Exit now: {exit_now}")
         # satify confidence or minimal exit layer
         if (exit_now |((layer_idx+2)==exit_layer)):
+            # print(f"[forward_early_with_CALM] Exiting at layer {layer_idx + 1}")
             break
         prev_state = new_state.clone()
 
@@ -479,17 +555,22 @@ def forward_early_with_CALM(
     # next_cache = next_decoder_cache
     if exit_query_cache is None:
         exit_query_cache = hidden_states
+        # print(f"[forward_early_with_CALM] Initializing exit_query_cache with hidden_states")
     else:
+        # print(f"[forward_early_with_CALM] exit_query_cache shape before concat: {exit_query_cache.shape}")
+        # print(f"[forward_early_with_CALM] hidden_states[:, -seq_length:] shape: {hidden_states[:, -seq_length:].shape}")
         exit_query_cache = torch.cat([exit_query_cache, hidden_states], dim=1)
+        # exit_query_cache = torch.cat([exit_query_cache, hidden_states[:, -seq_length:]], dim=1)
+        # print(f"[forward_early_with_CALM] exit_query_cache shape after concat: {exit_query_cache.shape}")
 
     hidden_states = model.model.norm(hidden_states)
 
     logits = model.lm_head(hidden_states)
 
+    # print(f"[forward_early_with_CALM] Final logits shape: {logits.shape}")
+    # print(f"[forward_early_with_CALM] Final exit_layer set to: {layer_idx + 2}")
+
     GenerationConfig.final_exit_layer=layer_idx+2
     return ForwardResult(
         logits=logits, past_key_values=past_key_values, exit_query_cache=exit_query_cache
     )
-
-
-

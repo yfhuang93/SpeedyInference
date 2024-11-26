@@ -327,13 +327,14 @@ class SelfSpeculativeGenerationStrategyWithCALM(GenerationStrategy):
         if sample:
             draft_probabilities: List[torch.Tensor] = []
         exit_query_cache = None
-        for _ in range(num_speculations):
+        for step in range(num_speculations):
             draft_result = forward_early_with_CALM(
                 model,
                 draft_input_ids,
                 past_key_values,
                 exit_layer,
                 exit_query_cache,
+                step
             )
             past_key_values = draft_result.past_key_values
             exit_query_cache = draft_result.exit_query_cache
@@ -369,7 +370,7 @@ class SelfSpeculativeGenerationStrategyWithCALM(GenerationStrategy):
             model,
             prefill_token_ids.int(),
             past_key_values,
-            GenerationConfig.final_exit_layer, # new exit layer
+            exit_layer, # new exit layer
             exit_query_cache,
         )
         logits = verify_results.logits
