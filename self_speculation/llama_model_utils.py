@@ -298,10 +298,12 @@ def forward_remainder(
 
         # the last layer should not have been skipped, we can get this to check how many of the tokens have gone through full
         # verification
-        if len(past_key_values) == len(model.model.layers):
+        if len(past_key_values) > len(model.model.layers)-8:
+            # print(f"branch 1")
             full_past_key_values_length = past_key_values[-1][0].shape[2]
         else:
             # we have not done a full pass yet so the history is 0
+            # print(f"branch 2")
             full_past_key_values_length = 0
 
         seq_length_with_past = num_tokens_to_generate + draft_past_key_values_length
@@ -309,13 +311,21 @@ def forward_remainder(
 
     inputs_embeds = model.model.embed_tokens(input_ids)
 
+    # print(f"draft_past_key_values_length={draft_past_key_values_length}")
+    # print(f"num_tokens_to_generate={num_tokens_to_generate}")
+    # print(f"seq_length_with_past={seq_length_with_past}")
+    # print(f"full_past_key_values_length={full_past_key_values_length}")
+
     position_ids = torch.arange(
         full_past_key_values_length,
         seq_length_with_past,
         dtype=torch.long,
         device=device,
     )
+    # print(f"position_ids={position_ids}")
+
     position_ids = position_ids.unsqueeze(0).view(-1, seq_length)
+
     attention_mask = input_ids.new_ones(
         (batch_size, seq_length_with_past),
         dtype=torch.bool,
@@ -369,18 +379,38 @@ def forward_remainder(
                     [exit_query_cache, hidden_states[:, -num_tokens_to_generate:]],
                     dim=1,
                 )
+                #print(f"branch1 layer={idx}")
+
             else:
                 # we already have seen the fully hidden states we can re-use them now
                 full_hidden_states = hidden_states
-            hidden_states, past_key_values = decoder_layer(
-                full_hidden_states,
-                attention_mask=full_attention_mask,
-                position_ids=position_ids,
-                past_key_value=past_key_values,
-                output_attentions=False,
-                use_cache=True,
-                padding_mask=None,
-            )
+                #print(f"branch2 layer={idx}")
+
+            if idx != len(model.model.layers) - 1 and torch.rand(1) < 0.1:
+                # print(f"past_key_values len={len(past_key_values)}")
+                # print(f"skip one layer idx={idx}")
+                hidden_states = full_hidden_states
+                # past_key_value = (
+                #     past_key_values[idx+1]
+                #     if (past_key_values is not None and idx < len(past_key_values))
+                #     else None
+                # )
+            else:
+                #print(f"position_ids={position_ids}")
+                #print(f"past_key_values len={len(past_key_values)}")
+                #print(f"full_hidden_states={full_hidden_states.shape}")
+                # print(f"full_attention_mask={full_attention_mask}")
+                hidden_states, past_key_values = decoder_layer(
+                    full_hidden_states,
+                    attention_mask=full_attention_mask,
+                    position_ids=position_ids,
+                    past_key_value=past_key_values,
+                    output_attentions=False,
+                    use_cache=True,
+                    padding_mask=None,
+                )
+                
+            # print(f"past_key_values len={len(past_key_values)} at layer {idx}")
 
     past_key_values = past_key_values.to_legacy_cache()
     hidden_states = model.model.norm(hidden_states)
