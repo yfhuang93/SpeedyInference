@@ -49,6 +49,7 @@ class BenchmarkArguments:
     random_shuffle: bool = True
     num_samples: Optional[int] = None
     n_shot: Optional[int] = 0
+    output_file: Optional[str] = None
 
 @dataclass
 class EvaluationExample:
@@ -243,7 +244,10 @@ def process_cli_arguments() -> Tuple[arguments.Arguments, BenchmarkArguments, Ge
 
     return general_arguments, benchmark_arguments, generation_config
 
+
+
+
 if __name__ == "__main__":
     args, benchmark_arguments, generation_config = process_cli_arguments()
     log.setLevel(level=logging.INFO) # TODO: set level based on argument
-    main(args, benchmark_arguments, generation_config, f"{args.output_dir}/benchmark_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+    main(args, benchmark_arguments, generation_config,  benchmark_arguments.output_file)

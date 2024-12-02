@@ -109,7 +109,7 @@ def prepare_xsum_summarization_format(n_shot: int = 0, seed: int = 42) -> List[E
         prompt_shots += "\n"
 
     evaluation_data_points = []
-    for data_point in load_dataset('xsum', split='test'):
+    for data_point in load_dataset('xsum', split='test', trust_remote_code=True):
         article = data_point["document"]
         highlights = data_point["summary"]
         evaluation_data_points.append(
