@@ -35,9 +35,13 @@ from self_speculation.generator_base import (
     GenerationResult,
     GenerationStrategy,
     HuggingfaceLlamaGenerator,
+    # HuggingfaceLlamaGeneratorSkip,
 )
 
-from self_speculation.self_speculation_generator import SelfSpeculativeGenerationStrategy
+from self_speculation.self_speculation_generator import SelfSpeculativeGenerationStrategy, SelfSpeculativeGenerationStrategySkip
+#SelfSpeculativeGenerationStrategyWithCALM#SelfSpeculativeGenerationStrategySkip
+
+from self_speculation.llama_model_utils import LlamaForCausalLM
 
 log = logging.getLogger(__name__)
 
@@ -159,7 +163,7 @@ def benchmark(
     if generation_config.generation_strategy == "autoregressive":
         generation_strategy: GenerationStrategy = AutoRegressiveGenerationStrategy()
     elif generation_config.generation_strategy == "self_speculative":
-        generation_strategy: GenerationStrategy = SelfSpeculativeGenerationStrategy()
+        generation_strategy: GenerationStrategy = SelfSpeculativeGenerationStrategySkip()
     else:
         raise Exception(
             f"Unsupported generation strategy: {generation_config.generation_strategy}"
@@ -211,6 +215,11 @@ def main(args: Arguments, benchmark_arguments: BenchmarkArguments, generation_co
     # Setup and Run Benchmark
     setup(args, device=device)
     model, tokenizer = load_model_and_tokenizer(args, device=device)
+    # # local_model_path = "facebook/layerskip-llama2-7B"#: str = args.model
+    # # tokenizer = transformers.AutoTokenizer.from_pretrained(local_model_path)
+    # # model = LlamaForCausalLM.from_pretrained(local_model_path, torch_dtype=torch.bfloat16).to('cuda:0').eval()
+    local_model_path = "facebook/layerskip-llama2-7B"
+    model = LlamaForCausalLM.from_pretrained(local_model_path, torch_dtype=torch.bfloat16).to('cuda:0').eval()
     metric_result = benchmark(model, tokenizer, benchmark_arguments, generation_config)
     print(metric_result)
 
